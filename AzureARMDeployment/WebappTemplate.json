@@ -1,0 +1,275 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "WebAppSvcPlanName": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Name of AppSvc Plan."
+      }
+    },
+    "WebAppSvcPlanSKU": {
+      "type": "string",
+      "allowedValues": [
+        "Free",
+        "Shared",
+        "Basic",
+        "Standard"
+      ],
+      "defaultValue": "Basic",
+      "metadata": {
+        "description": "App Svc Plan SKU."
+      }
+    },
+    "WebAppSvcPlanWorkerSize": {
+      "type": "string",
+      "allowedValues": [
+        "0",
+        "1",
+        "2"
+      ],
+      "defaultValue": "0",
+      "metadata": {
+        "description": "Size of AppSvc Worker."
+      }
+    },
+    "WebAppName": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Name of web site."
+      }
+    },
+    "DeployPackageURI": {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue": "Your code package blob storage url",
+      "metadata": {
+        "description": "WebDeploy package location."
+      }
+    },
+    "SasToken": {
+      "type": "string",
+      "defaultValue": "Your code package blob storage secret key",
+      "metadata": {
+        "description": "Sas token to be appended to DeployPackageURI."
+      }
+    },
+    "StorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage Account to access blob storage."
+      }
+    },
+    "SQLServerName": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Name of SQL Server."
+      }
+    },
+    "SQLDBName": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Name of SQL DB."
+      }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "B",
+      "allowedValues": [
+        "B",
+        "S0",
+        "S1",
+        "S2",
+        "S3",
+        "P1",
+        "P2",
+        "P6",
+        "P4",
+        "P11",
+        "P15"
+      ],
+      "metadata": {
+        "description": "Describes plan's pricing tier and instance size. Check details at https://azure.microsoft.com/en-us/pricing/details/app-service/"
+      }
+    },
+    "skuCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "metadata": {
+        "description": "Describes plan's instance count"
+      }
+    },
+    "sqlAdministratorLogin": {
+      "type": "string",
+      "defaultValue": "dbuser",
+      "metadata": {
+        "description": "The admin user of the SQL Server"
+      }
+    },
+    "sqlAdministratorLoginPassword": {
+      "type": "securestring",
+      "defaultValue": "1QAZ2wsx=",
+      "metadata": {
+        "description": "The password of the admin user of the SQL Server"
+      }
+    }
+  },
+  "variables": {
+    "packageURI": "[concat(parameters('DeployPackageURI'),parameters('SasToken'))]"
+  },
+  "resources": [
+    {
+      "name": "[parameters('StorageAccountName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-01-01",
+      "tags": {
+        "displayName": "StorageAccount"
+      },
+      "kind": "Storage",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": { }
+    },
+    {
+      "name": "[parameters('WebAppSvcPlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-06-01",
+      "dependsOn": [ ],
+      "tags": {
+        "displayName": "AppSvcPlan"
+      },
+      "properties": {
+        "name": "[parameters('WebAppSvcPlanName')]",
+        "sku": "[parameters('WebAppSvcPlanSKU')]",
+        "workerSize": "[parameters('WebAppSvcPlanWorkerSize')]",
+        "numberOfWorkers": 1
+      }
+    },
+    {
+      "name": "[parameters('SQLServerName')]",
+      "type": "Microsoft.Sql/servers",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "SqlServer"
+      },
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdministratorLogin')]",
+        "administratorLoginPassword": "[parameters('sqlAdministratorLoginPassword')]",
+        "version": "12.0"
+      },
+      "resources": [
+        {
+          "name": "[parameters('SQLDBName')]",
+          "type": "databases",
+          "location": "[resourceGroup().location]",
+          "tags": {
+            "displayName": "Database"
+          },
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[parameters('SQLServerName')]"
+          ],
+          "properties": {
+            "edition": "Basic",
+            "maxSizeBytes": "1073741824",
+            "requestedServiceObjectiveName": "Basic"
+          }
+        },
+        {
+          "type": "firewallrules",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[parameters('SQLServerName')]"
+          ],
+          "location": "[resourceGroup().location]",
+          "name": "AllowAllWindowsAzureIps",
+          "properties": {
+            "endIpAddress": "255.255.255.255",
+            "startIpAddress": "0.0.0.0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "[parameters('WebAppName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-08-01",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/', parameters('WebAppSvcPlanName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', parameters('WebAppSvcPlanName'))]": "Resource",
+        "displayName": "WebApp"
+      },
+      "properties": {
+        "name": "[parameters('WebAppName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', parameters('WebAppSvcPlanName'))]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2015-08-01",
+          "name": "web",
+          "type": "config",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', parameters('WebAppName'))]",
+            "[concat('Microsoft.Web/sites/', parameters('WebAppName'), '/extensions/MSDeploy')]"
+          ],
+          "tags": {
+            "displayName": "WebAppConfig"
+          },
+          "properties": {
+            "phpVersion": "5.6",
+            "netFrameworkVersion": "v4.6",
+            "use32BitWorkerProcess": false,
+            "webSocketsEnabled": true,
+            "alwaysOn": false,
+            "remoteDebuggingEnabled": false
+          }
+        },
+        {
+          "name": "appsettings",
+          "type": "config",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', parameters('WebAppName'))]",
+            "[concat('Microsoft.Web/sites/', parameters('WebAppName'), '/extensions/MSDeploy')]"
+          ],
+          "tags": {
+            "displayName": "WebAppAppSettings"
+          },
+          "properties": {
+            "AppUrlBase": "[concat('http://',parameters('WebAppName'),'.chinacloudsites.cn')]",
+            "blob:Account": "[parameters('StorageAccountName')]",
+            "blob:Key": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('StorageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]",
+            "ef:ConnectionString": "[concat('Server=tcp:', reference(concat('Microsoft.Sql/servers/', parameters('SQLServerName'))).fullyQualifiedDomainName, ',1433;Database=', parameters('SQLDBName'), ';User Id=', parameters('sqlAdministratorLogin'), '@', parameters('SQLServerName'), ';Password=', parameters('sqlAdministratorLoginPassword'), ';Trusted_Connection=False;Encrypt=True;Connection Timeout=30;')]"
+          }
+        },
+        {
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', parameters('WebAppName'))]"
+          ],
+          "tags": {
+            "displayName": "WebAppMSDeploy"
+          },
+          "properties": {
+            "packageUri": "[variables('packageURI')]"
+          }
+        }
+      ]
+    }
+  ]
+}

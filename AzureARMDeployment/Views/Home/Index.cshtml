@@ -1,0 +1,20 @@
+﻿@using AzureARMDeployment.Models
+@model DeployParamModel
+@{
+    ViewBag.Title = "Index";
+}
+
+<div class="jumbotron">
+    <h1>Azure Auto-deployment</h1>
+    <p class="lead">The auto-deployment is based on ARM template and Azure AD.</p>
+</div>
+<div>
+@using (Html.BeginForm("AutoStart", "Deployment"))
+{
+    <p class="badge">Subscription Id</p>
+    @Html.TextBox("subscriptionId")
+    <p class="badge">Solution Name</p>
+    @Html.TextBox("solutionName")
+    <input type="submit" value="Start"/>
+}
+</div>
