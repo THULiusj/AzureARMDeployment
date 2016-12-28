@@ -16,19 +16,19 @@ This project is to demonstrate how to automatically create Azure China services 
 
 Start the demo and input your subscription id and solution name in the text boxes.
 
-![Start page Capture]({{site.baseurl}}/images/startpage.jpg)
+![Start page Capture](../master/images/startpage.jpg?raw=true)
 
 Press start button, then the login page will be popped up.
 
-![Login page Capture]({{site.baseurl}}/images/loginpage.jpg)
+![Login page Capture](../master/images/loginpage.jpg?raw=true)
 
 Log in with your Azure China account and the deployment task will be submitted. The result website url is highlighted.
 
-![Task page Capture]({{site.baseurl}}/images/taskpage.jpg)
+![Task page Capture](../master/images/taskpage.jpg?raw=true)
 
 You can also monitor deployment status in Azure Portal.
 
-![Status page Capture]({{site.baseurl}}/images/statuspage.jpg)
+![Status page Capture](../master/images/statuspage.jpg?raw=true)
 
 ## Project description ##
 ### *Azure Active Directory configuration* ###
